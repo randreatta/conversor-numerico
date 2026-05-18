@@ -192,6 +192,7 @@ export default function SQLFormatter() {
   const [segmentationMode, setSegmentationMode] = useState('auto');
   const [lineBreakAfterItems, setLineBreakAfterItems] = useState(false);
   const [itemCount, setItemCount] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
 
   useEffect(() => {
     const logger = loggerRef.current;
@@ -319,7 +320,53 @@ export default function SQLFormatter() {
     setOutput('');
     setCopied(false);
     setItemCount(0);
+    setMaxStep(0);
     loggerRef.current.clear();
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    if (val.trim()) {
+      setMaxStep(prev => Math.max(prev, 1));
+    } else {
+      setMaxStep(0);
+      setOutput('');
+      setItemCount(0);
+    }
+  };
+
+  const handleInputTypeChange = (e) => {
+    setInputType(e.target.value);
+    setMaxStep(2);
+    setOutput('');
+    setItemCount(0);
+  };
+
+  const handleOutputFormatChange = (e) => {
+    setOutputFormat(e.target.value);
+    setMaxStep(inputType === 'number' ? 5 : 3);
+    setOutput('');
+    setItemCount(0);
+  };
+
+  const handleTextCaseChange = (e) => {
+    setTextCase(e.target.value);
+    setMaxStep(inputType === 'text' ? 4 : 5);
+    setOutput('');
+    setItemCount(0);
+  };
+
+  const handleSegmentationChange = (e) => {
+    setSegmentationMode(e.target.value);
+    setMaxStep(5);
+    setOutput('');
+    setItemCount(0);
+  };
+
+  const handleSeparatorChange = (e) => {
+    setSeparator(e.target.value);
+    setMaxStep(prev => Math.max(prev, 6));
   };
 
   const getLogColor = (level) => {
@@ -388,28 +435,34 @@ export default function SQLFormatter() {
             {/* Aba Formatador */}
             {activeTab === 'formatter' && (
               <>
-                {/* Entrada */}
-                <div className="mb-6">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                    Dados de entrada
-                  </label>
+                {/* Step 0: Entrada */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                      Dados de entrada
+                    </label>
+                  </div>
                   <textarea
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={handleInputChange}
+                    placeholder="Cole sua lista aqui — um item por linha ou separados por vírgula, espaço..."
                     className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none font-mono text-sm placeholder:text-gray-400"
                   />
                 </div>
 
-                {/* Configurações */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  {/* Tipo de entrada */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                      Tipo de entrada
-                    </label>
+                {/* Step 1: Tipo de entrada */}
+                {maxStep >= 1 && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                        Tipo de entrada
+                      </label>
+                    </div>
                     <select
                       value={inputType}
-                      onChange={(e) => setInputType(e.target.value)}
+                      onChange={handleInputTypeChange}
                       className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
                     >
                       <option value="auto">Auto-detectar</option>
@@ -417,33 +470,20 @@ export default function SQLFormatter() {
                       <option value="text">Texto</option>
                     </select>
                   </div>
+                )}
 
-                  {/* Segmentação de entrada */}
-                  {inputType === 'text' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                        Segmentação
+                {/* Step 2: Formato de saída */}
+                {maxStep >= 2 && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                        Formato de saída
                       </label>
-                      <select
-                        value={segmentationMode}
-                        onChange={(e) => setSegmentationMode(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
-                      >
-                        <option value="auto">Auto-detectar</option>
-                        <option value="by_line">Por linha (nomes completos)</option>
-                        <option value="by_space">Por espaço (palavras)</option>
-                      </select>
                     </div>
-                  )}
-
-                  {/* Formato de saída */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                      Formato de saída
-                    </label>
                     <select
                       value={outputFormat}
-                      onChange={(e) => setOutputFormat(e.target.value)}
+                      onChange={handleOutputFormatChange}
                       className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
                     >
                       <option value="string_quoted">Com aspas ('123')</option>
@@ -451,35 +491,64 @@ export default function SQLFormatter() {
                       <option value="number">Número (123)</option>
                     </select>
                   </div>
+                )}
 
-                  {/* Formatação de texto */}
-                  {(inputType === 'text' || inputType === 'auto') && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                {/* Step 3: Capitalização (apenas texto/auto) */}
+                {maxStep >= 3 && inputType !== 'number' && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
                         Capitalização
                       </label>
-                      <select
-                        value={textCase}
-                        onChange={(e) => setTextCase(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
-                      >
-                        <option value="original">Original</option>
-                        <option value="uppercase">MAIÚSCULO</option>
-                        <option value="lowercase">minúsculo</option>
-                        <option value="capitalize">Capitalize</option>
-                        <option value="titleCase">Title Case</option>
-                      </select>
                     </div>
-                  )}
+                    <select
+                      value={textCase}
+                      onChange={handleTextCaseChange}
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="original">Original</option>
+                      <option value="uppercase">MAIÚSCULO</option>
+                      <option value="lowercase">minúsculo</option>
+                      <option value="capitalize">Capitalize</option>
+                      <option value="titleCase">Title Case</option>
+                    </select>
+                  </div>
+                )}
 
-                  {/* Separador */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                      Separador
-                    </label>
+                {/* Step 4: Segmentação (apenas text) */}
+                {maxStep >= 4 && inputType === 'text' && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                        Segmentação
+                      </label>
+                    </div>
+                    <select
+                      value={segmentationMode}
+                      onChange={handleSegmentationChange}
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="auto">Auto-detectar</option>
+                      <option value="by_line">Por linha (nomes completos)</option>
+                      <option value="by_space">Por espaço (palavras)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Step 5: Separador */}
+                {maxStep >= 5 && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                        Separador
+                      </label>
+                    </div>
                     <select
                       value={separator}
-                      onChange={(e) => setSeparator(e.target.value)}
+                      onChange={handleSeparatorChange}
                       className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
                     >
                       <option value="">Nenhum</option>
@@ -501,38 +570,48 @@ export default function SQLFormatter() {
                       />
                     )}
                   </div>
+                )}
 
-                  {/* Parênteses */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="parentheses"
-                      checked={withParentheses}
-                      onChange={(e) => setWithParentheses(e.target.checked)}
-                      className="w-4 h-4 text-violet-600 rounded focus:ring-2 focus:ring-violet-500"
-                    />
-                    <label htmlFor="parentheses" className="ml-2 text-sm text-gray-600">
-                      Envolver com parênteses <span className="text-gray-400 font-mono">( )</span>
-                    </label>
+                {/* Step 6: Opções finais */}
+                {maxStep >= 6 && (
+                  <div className="step-reveal border-t border-gray-100 mt-5 pt-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                        Opções finais
+                      </label>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="parentheses"
+                          checked={withParentheses}
+                          onChange={(e) => setWithParentheses(e.target.checked)}
+                          className="w-4 h-4 text-violet-600 rounded focus:ring-2 focus:ring-violet-500"
+                        />
+                        <label htmlFor="parentheses" className="ml-2 text-sm text-gray-600">
+                          Envolver com parênteses <span className="text-gray-400 font-mono">( )</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="lineBreak"
+                          checked={lineBreakAfterItems}
+                          onChange={(e) => setLineBreakAfterItems(e.target.checked)}
+                          className="w-4 h-4 text-violet-600 rounded focus:ring-2 focus:ring-violet-500"
+                        />
+                        <label htmlFor="lineBreak" className="ml-2 text-sm text-gray-600">
+                          Quebra de linha entre os itens
+                        </label>
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Quebra de linha após itens */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="lineBreak"
-                      checked={lineBreakAfterItems}
-                      onChange={(e) => setLineBreakAfterItems(e.target.checked)}
-                      className="w-4 h-4 text-violet-600 rounded focus:ring-2 focus:ring-violet-500"
-                    />
-                    <label htmlFor="lineBreak" className="ml-2 text-sm text-gray-600">
-                      Quebra de linha entre os itens
-                    </label>
-                  </div>
-                </div>
+                )}
 
                 {/* Botões */}
-                <div className="flex gap-3 mb-6">
+                <div className="flex gap-3 mt-6 border-t border-gray-100 pt-5">
                   <button
                     onClick={handleFormat}
                     disabled={!input.trim()}
@@ -550,7 +629,7 @@ export default function SQLFormatter() {
 
                 {/* Saída */}
                 {output && (
-                  <div>
+                  <div className="step-reveal mt-6 border-t border-gray-100 pt-5">
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-3">
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
