@@ -446,7 +446,6 @@ export default function SQLFormatter() {
                   <textarea
                     value={input}
                     onChange={handleInputChange}
-                    placeholder="Cole sua lista aqui — um item por linha ou separados por vírgula, espaço..."
                     className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none font-mono text-sm placeholder:text-gray-400"
                   />
                 </div>
